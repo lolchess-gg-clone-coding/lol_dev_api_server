@@ -1,39 +1,6 @@
-// mysql 패키지 
-const mysql = require("mysql2/promise");
-
-// axios는 http 요청 관리하는 패키지
-const axios = require('axios');
-const express = require("express");
-
-// .env 파일을 읽어오기 위한 패키지
 require('dotenv').config();
 
-console.log(process.env.MYSQL_ROOT_PASSWORD);
-
-// DB 코드
-const dbConnect = async () => {
-  try {
-    const connection = await mysql.createConnection({
-      host: process.env.MYSQL_HOST,
-      user: "root",
-      port: "3306",
-      password: process.env.MYSQL_ROOT_PASSWORD,
-      database: process.env.MYSQL_DATABASE,
-    });
-
-    console.log("mysql connection success");
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-dbConnect();
-
-
-// 여기서부터는 서버 API 코드
-const app = express();
-
-const port = 3000;
+const axios = require('axios');
 
 const my_api_key = process.env.API_KEY;
 
@@ -49,9 +16,18 @@ const tierEnums = {
 async function getAllInfo(nickname) {
   let all_info = {};
 
-  all_info['userInfo'] = await getUserInfoByNickname(nickname);
+  try {
+    all_info['userInfo'] = await getUserInfoByNickname(nickname);
+  } catch (error) {
+    console.log(error);
+  }
 
-  let matchIdList = await getMatchIdList(all_info['userInfo']['puuid'], 1);
+  let matchIdList
+  try {
+    matchIdList = await getMatchIdList(all_info['userInfo']['user']['puuid'], 1);
+  } catch (error) {
+    console.log(error);
+  }
 
   temp = await getMatchInfo(matchIdList);
   all_info['match_info'] = temp['match_info'];
@@ -184,9 +160,9 @@ async function getMatchInfo(match_id) {
     all_info['units_use_items_info'].push(getUnitsUseItemsInfo(e));
     all_info['augments_in_matches_info'].push(getAugmentInMatchesInfo(match_id, e));
   });
-  
+
   console.log(all_info);
-  
+
   return all_info;
 }
 
@@ -380,21 +356,7 @@ function Unix_timestamp(t) {
   return year + "-" + month.substr(-2) + "-" + day.substr(-2) + " " + hour.substr(-2) + ":" + minute.substr(-2) + ":" + second.substr(-2);
 }
 
-//client가 "/"경로에 get 요청을 보내면
-//req는 요청객체, res는 응답객체 이다.
-app.get("/summoners/by-name/:nickname", async (req, res) => {
-  let { nickname } = req.params;
-
-
-  let user_info = await getUserInfoByNickname(nickname);
-  // 이거는 API 요청하기 전에, 최신 전적 MATCH_ID 불러와서 그거랑 맞는 MATCH_ID 나올 때까지 함수 돌리는 걸로 하자.
-  let match_list = await getMatchIdList(user_info['user']['puuid'], 1);
-
-  await getMatchInfo(match_list[0]);
-});
-
-//middleware
-//port에 접속 성공하면 콜백 함수를 실행시킨다.
-app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`);
-});
+exports.getAllInfo = getAllInfo;
+// 원하는 함수 가져다 쓰고 싶으면
+// exports.{원하는 함수명} = {사용할 함수명}
+// 이렇게 가져가면 됌
