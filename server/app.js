@@ -123,7 +123,7 @@ async function getMatchInfo(match_id) {
   console.log("\nresponse_match_participants[0]_units:");
   console.log(response_match['data']['info']['participants'][0]['units']);
 }
-//middleware이다.
+
 //client가 "/"경로에 get 요청을 보내면
 //req는 요청객체, res는 응답객체 이다.
 app.get("/summoners/by-name/:nickname", async (req, res) => {
