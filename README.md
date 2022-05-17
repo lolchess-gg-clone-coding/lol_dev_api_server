@@ -12,6 +12,7 @@
 1. docker-mysql/server 경로에서 node app.js 시작
 2. localhost:3000/summoners/by-name/{검색을 원하는 닉네임 입력, 중괄호 빼기}
 3. 터미널에 로그 찍힘
+4. 현재 제일 최근 매칭 데이터만 저장하게 해놨음. 만약 이전 전적도 검색하고 싶다면 lol_api.js의 35줄과 235줄 주석 확인
 
 ## Env
 
