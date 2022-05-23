@@ -8,12 +8,12 @@ console.log(my_api_key);
 
 const headers = {
   "X-Riot-Token": my_api_key
-  
-    // "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Safari/537.36",
-    // "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-    // "Accept-Charset": "application/x-www-form-urlencoded; charset=UTF-8",
-    // "Origin": "https://developer.riotgames.com",
-    // "X-Riot-Token": "RGAPI-9b4295fc-5774-4015-b8b9-bb82736dec86"
+
+  // "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Safari/537.36",
+  // "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+  // "Accept-Charset": "application/x-www-form-urlencoded; charset=UTF-8",
+  // "Origin": "https://developer.riotgames.com",
+  // "X-Riot-Token": "RGAPI-9b4295fc-5774-4015-b8b9-bb82736dec86"
 
 };
 
@@ -49,38 +49,28 @@ async function getAllInfo(nickname) {
 
   temp = await getMatchInfo(matchIdList);
 
-  for (i = 0; i < 8; i++) {
-    // 조건문 다시 짜기
-    if (searchUserPuuid != temp['match_info'][i]['puuid'][i]) {
-      let participantPuuid = temp['match_info'][i]['puuid'][i];
-      all_info[i]['user_info'] = await getUserInfoByPuuid(participantPuuid);
-    } else {
-      all_info[i]['user_info'] = searchUserInfo;
-    }
-
-    all_info[i]['match_info'] = temp['match_info'][i];
-    all_info[i]['legends_info'] = temp['legends_info'][i];
-    all_info[i]['synergy_info'] = temp['synergy_info'][i];
-    all_info[i]['units_info'] = temp['units_info'][i];
-    all_info[i]['items_info'] = temp['items_info'][i];
-    all_info[i]['augments_info'] = temp['augments_info'][i];
-    all_info[i]['synergy_in_matches_info'] = temp['synergy_in_matches_info'][i];
-    all_info[i]['units_in_matches_info'] = temp['units_in_matches_info'][i];
-    all_info[i]['augments_in_matches_info'] = temp['augments_in_matches_info'][i];
-  }
-
-  return all_info;
+  return temp;
 }
 
 async function getUserInfoByNickname(nickname) {
   try {
-    response_summoner = await axios.get('https://kr.api.riotgames.com/tft/summoner/v1/summoners/by-name/' + encodeURI(nickname), { headers: headers} );
+    response_summoner = await axios.get('https://kr.api.riotgames.com/tft/summoner/v1/summoners/by-name/' + encodeURI(nickname), { headers: headers });
     return await parsingUserInfo(response_summoner);
   } catch (error) {
     console.log('getUserInfoByNickname');
     console.log(error);
   }
   // user table
+}
+
+async function getUserInfoByAccountId(account_id) {
+  try {
+    response_summoner = await axios.get('https://kr.api.riotgames.com/tft/summoner/v1/summoners/by-account/' + account_id + "?api_key=" + my_api_key);
+    return await parsingUserInfo(response_summoner);
+  } catch (error) {
+    console.log('getUserInfoByAccountId');
+    console.log(error);
+  }
 }
 
 async function getUserInfoByPuuid(puuid) {
@@ -96,6 +86,7 @@ async function getUserInfoByPuuid(puuid) {
 async function parsingUserInfo(response) {
   let user = {};
 
+  user['account_id'] = response['data']['accountId'];
   user['puuid'] = response['data']['puuid'];
   user['summoner_id'] = response['data']['id'];
   user['nickname'] = response['data']['name'].toString().replace(/(\s*)/g, "");
@@ -123,7 +114,7 @@ async function parsingUserInfo(response) {
 
   if (response_league['data'].length == 0) {
     // 초고속 모드
-    user_superfast['puuid'] = response_summoner['data']['puuid'];
+    user_superfast['account_id'] = response_summoner['data']['accountId'];
     user_superfast['date_in_sf'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
     user_superfast['tier'] = 'Unranked';
     user_superfast['league_point'] = 0;
@@ -132,7 +123,7 @@ async function parsingUserInfo(response) {
     superfast['image_path'] = "";
 
     // 랭크 게임
-    user_ranks['puuid'] = response_summoner['data']['puuid'];
+    user_ranks['account_id'] = response_summoner['data']['accountId'];
     user_ranks['date_in_ranks'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
     user_ranks['tier'] = 'Unranked';
     user_ranks['sub_tier'] = 'N';
@@ -146,7 +137,7 @@ async function parsingUserInfo(response) {
     ranks['image_path'] = "";
   } else if (response_league['data'].length == 1 && response_league['data'][0]['queueType'] == 'RANKED_TFT_TURBO') {
     // 초고속 모드
-    user_superfast['puuid'] = response_summoner['data']['puuid'];
+    user_superfast['account_id'] = response_summoner['data']['accountId'];
     user_superfast['date_in_sf'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
     user_superfast['tier'] = response_league['data'][0]['ratedTier'];
     user_superfast['league_point'] = response_league['data'][0]['ratedRating'];
@@ -155,7 +146,7 @@ async function parsingUserInfo(response) {
     superfast['image_path'] = "";
 
     // 랭크 게임
-    user_ranks['puuid'] = response_summoner['data']['puuid'];
+    user_ranks['account_id'] = response_summoner['data']['accountId'];
     user_ranks['date_in_ranks'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
     user_ranks['tier'] = 'Unranked';
     user_ranks['sub_tier'] = 'N';
@@ -171,7 +162,7 @@ async function parsingUserInfo(response) {
   } else {
     if (response_league['data'].length == 1) {
       // 초고속 모드
-      user_superfast['puuid'] = response_summoner['data']['puuid'];
+      user_superfast['account_id'] = response_summoner['data']['accountId'];
       user_superfast['date_in_sf'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
       user_superfast['tier'] = 'Unranked';
       user_superfast['league_point'] = 0;
@@ -180,7 +171,7 @@ async function parsingUserInfo(response) {
       superfast['image_path'] = "";
 
       // 랭크 게임
-      user_ranks['puuid'] = response_summoner['data']['puuid'];
+      user_ranks['account_id'] = response_summoner['data']['accountId'];
       user_ranks['date_in_ranks'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
       user_ranks['tier'] = response_league['data'][0]['tier'];
       user_ranks['sub_tier'] = response_league['data'][0]['rank'];
@@ -202,7 +193,7 @@ async function parsingUserInfo(response) {
       // console.log(typeof(response_league['data'][1]));  
 
       // 초고속 모드
-      user_superfast['puuid'] = response_summoner['data']['puuid'];
+      user_superfast['account_id'] = response_summoner['data']['accountId'];
       user_superfast['date_in_sf'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
       user_superfast['tier'] = temp[1]['ratedTier'];
       user_superfast['league_point'] = response_league['data'][1]['ratedRating'];
@@ -211,11 +202,11 @@ async function parsingUserInfo(response) {
       superfast['image_path'] = "";
 
       // 랭크 게임
-      user_ranks['puuid'] = response_summoner['data']['puuid'];
+      user_ranks['account_id'] = response_summoner['data']['accountId'];
       user_ranks['date_in_ranks'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
       user_ranks['tier'] = temp[0]['tier'];
-      user_ranks['sub_tier'] = temp['rank'];
-      user_ranks['league_point'] = temp['leaguePoints'];
+      user_ranks['sub_tier'] = temp[0]['rank'];
+      user_ranks['league_point'] = temp[0]['leaguePoints'];
       user_ranks['win'] = response_league['data'][0]['wins'];
       user_ranks['defeat'] = response_league['data'][0]['losses'];
       user_ranks['top4'] = 0;
@@ -258,16 +249,17 @@ async function getMatchInfo(match_id) {
 
   // 먼저 참가자들 데이터부터 유저 테이블에 저장 
   let participants = response_match['data']['info']['participants'];
-  // participants.forEach(async element => await getUserInfoByPuuid(element['puuid']));
+  // participants.forEach(async element => await getUserInfoByAccountId(element['puuid']));
 
   // 전적 테이블`
   let all_info = {};
+  let temp = {};
 
   // 전적 테이블 
   all_info['match_info'] = [];
 
   temp = {};
-  temp['puuid'] = [];
+  temp['account_id'] = [];
   temp['match_id'] = [];
   temp['playtime'] = [];
   temp['game_type'] = [];
@@ -278,6 +270,7 @@ async function getMatchInfo(match_id) {
   temp['playdate'] = [];
   temp['legends_name'] = [];
 
+  all_info['user_info'] = [];
   all_info['legends_info'] = [];
   all_info['synergy_info'] = [];
   all_info['units_info'] = [];
@@ -287,30 +280,39 @@ async function getMatchInfo(match_id) {
   all_info['units_in_matches_info'] = [];
   all_info['augments_in_matches_info'] = [];
 
-  participants.forEach((e) => {
-    // 전적 테이블 
-    temp['match_id'].push(match_id);
-    temp['game_type'].push(response_match['data']['info']['tft_game_type']);
-    temp['playdate'].push(new Date((response_match['data']['info']['game_datetime'])));
-    temp['puuid'].push(e['puuid']);
-    temp['left_gold'].push(e['gold_left']);
-    temp['levels'].push(e['level']);
-    temp['placement'].push(e['placement']);
-    temp['last_round'].push(e['last_round']);
-    temp['playtime'].push(e['time_eliminated']);
-    temp['legends_name'].push(getLegendsInfo(e)['legends_name']);
+  let i = 0;
 
-    all_info['match_info'].push(temp);
-    all_info['legends_info'].push(getLegendsInfo(e));
-    all_info['synergy_info'].push(getSynergyInfo(e));
-    all_info['units_info'].push(getUnitsInfo(e));
-    all_info['items_info'].push(getItemsInfo(e));
-    all_info['augments_info'].push(getAugmentsInfo(e));
-    all_info['synergy_in_matches_info'].push(getSynergyInMatchInfo(match_id, e));
-    all_info['units_in_matches_info'].push(getUnitsInMatchInfo(match_id, e));
-    all_info['augments_in_matches_info'].push(getAugmentInMatchInfo(match_id, e));
+  // async function all_info_push() {
+    for(let e of participants) {
+      // 전적 테이블 
 
-  });
+      var user_info = await getUserInfoByPuuid(e['puuid']);
+      all_info['user_info'].push(user_info);
+
+      e['account_id'] = all_info['user_info'][i]['user']['account_id'];
+
+      temp['match_id'].push(match_id);
+      temp['game_type'].push(response_match['data']['info']['tft_game_type']);
+      temp['playdate'].push(new Date((response_match['data']['info']['game_datetime'])));
+      temp['account_id'].push(all_info['user_info'][i]['user']['account_id']);
+      temp['left_gold'].push(e['gold_left']);
+      temp['levels'].push(e['level']);
+      temp['placement'].push(e['placement']);
+      temp['last_round'].push(e['last_round']);
+      temp['playtime'].push(e['time_eliminated']);
+      temp['legends_name'].push(getLegendsInfo(e)['legends_name']);
+
+      all_info['match_info'].push(temp);
+      all_info['legends_info'].push(getLegendsInfo(e));
+      all_info['synergy_info'].push(getSynergyInfo(e));
+      all_info['units_info'].push(getUnitsInfo(e));
+      all_info['items_info'].push(getItemsInfo(e));
+      all_info['augments_info'].push(getAugmentsInfo(e));
+      all_info['synergy_in_matches_info'].push(getSynergyInMatchInfo(match_id, e));
+      all_info['units_in_matches_info'].push(getUnitsInMatchInfo(match_id, e));
+      all_info['augments_in_matches_info'].push(getAugmentInMatchInfo(match_id, e));
+      i++;
+    }
 
   return all_info;
 }
@@ -328,14 +330,16 @@ function getLegendsInfo(participant) {
 function getSynergyInMatchInfo(match_id, participant) {
   let synergy_in_matches_info = {};
 
-  synergy_in_matches_info['puuid'] = [];
+  synergy_in_matches_info['account_id'] = [];
   synergy_in_matches_info['match_id'] = [];
   synergy_in_matches_info['synergy_name'] = [];
+  synergy_in_matches_info['synergy_rank'] = [];
 
   participant['traits'].forEach((trait) => {
     synergy_in_matches_info['match_id'].push(match_id);
     synergy_in_matches_info['synergy_name'].push(trait['name']);
-    synergy_in_matches_info['puuid'].push(participant['puuid']);
+    synergy_in_matches_info['synergy_rank'].push(trait['tier_current']);
+    synergy_in_matches_info['account_id'].push(participant['account_id']);
   });
 
   return synergy_in_matches_info;
@@ -359,7 +363,7 @@ function getSynergyInfo(participant) {
 function getAugmentInMatchInfo(match_id, participant) {
   let augments_in_matches_info = {};
 
-  augments_in_matches_info['puuid'] = participant['puuid'];
+  augments_in_matches_info['account_id'] = participant['account_id'];
   augments_in_matches_info['match_id'] = match_id;
 
   switch (participant['augments'].length) {
@@ -415,7 +419,7 @@ function getAugmentsInfo(participant) {
 function getUnitsInMatchInfo(match_id, participant) {
   let units_in_matches_info = {};
 
-  units_in_matches_info['puuid'] = [];
+  units_in_matches_info['account_id'] = [];
   units_in_matches_info['match_id'] = [];
   units_in_matches_info['used_unit_id'] = [];
   units_in_matches_info['units_name'] = [];
@@ -426,7 +430,7 @@ function getUnitsInMatchInfo(match_id, participant) {
 
   participant['units'].forEach((unit) => {
     units_in_matches_info['match_id'].push(match_id);
-    units_in_matches_info['puuid'].push(participant['puuid']);
+    units_in_matches_info['account_id'].push(participant['account_id']);
     units_in_matches_info['units_name'].push(unit['character_id']);
     units_in_matches_info['units_rank'].push(unit['tier']);
 
@@ -490,8 +494,8 @@ function getUnitsInfo(participant) {
     units_info['units_name'].push(unit['character_id']);
     units_info['units_rank'].push(unit['tier']);
 
-    if (unit['rarity'] == 5) { 
-      units_info['units_cost'].push(unit['rarity']); 
+    if (unit['rarity'] == 5) {
+      units_info['units_cost'].push(unit['rarity']);
     } else {
       units_info['units_cost'].push(unit['rarity'] + 1);
     }
