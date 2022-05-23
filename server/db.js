@@ -44,9 +44,19 @@ const dbInsert = async (table, values) => {
   }
 };
 
+const dbUpdate = async (table, set, where) => {
+  try {
+    var sql = `UPDATE ${table} SET ${set} WHERE ${where}`;
+    console.log(sql);
+    await connection.promise().query(sql);
+  } catch (error) {
+    console.log(error);
+  }
+}
 exports.dbConnect = dbConnect;
 exports.dbSelect = dbSelect;
 exports.dbInsert = dbInsert;
+exports.dbUpdate = dbUpdate;
 // 원하는 함수 가져다 쓰고 싶으면
 // exports.{원하는 함수명} = {사용할 함수명}
 // 이렇게 가져가면 됌

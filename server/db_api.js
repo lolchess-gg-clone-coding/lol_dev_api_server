@@ -11,17 +11,19 @@ const initApi = async (nickname) => {
 
 // profile -> user, superfast & rank -> user_superfast & user_rank
 const insertTFTUserData = async (puuid, participant) => {
-    const [user] = await db.dbSelect('puuid', 'user', `user.puuid="${puuid}"`);
+    const [user] = await db.dbSelect('*', 'user', `user.puuid="${puuid}"`);
 
     if (user != undefined) {
-        if (user.puuid == undefined) {
-            let insertData = [Array.from(new Map(Object.entries(participant)).values())];
-            // let insertData = [Array.from(new Map(Object.entries(all_info['user_info']['user'])).values())];
-            try { await db.dbInsert('USER', insertData); } catch (error) {
-                console.log(error);
+            var isUpdatedTime = (new Date(Date.now()) - user['updateAt']) / (1000*60);
+            var isRecent = isUpdatedTime < 5 ? true : false;
+        if (isRecent) {
+            for (const [key, value] of Object.entries(participant)) {
+                if(key == puuid) continue;
+                if(isString(value)) db.dbUpdate('USER', `${key} = "${value}"`, `puuid = "${puuid}"`);
+                else db.dbUpdate('USER', `${key} = ${value}`, `puuid = "${puuid}"`);
             }
         } else {
-            console.log('User exists');
+            console.log(`User data already updated before ${isUpdatedTime}`);
         }
     } else {
         try {
@@ -35,15 +37,14 @@ const insertTFTUserData = async (puuid, participant) => {
 };
 
 const insertTFTProfileData = async (icon_id, participant_profile) => {
-    const [profile] = await db.dbSelect('icon_id', 'profile', `profile.icon_id=${icon_id}`);
+    const [profile] = await db.dbSelect('*', 'profile', `profile.icon_id=${icon_id}`);
     // const [profile] = await db.dbSelect('icon_id', 'profile', `profile.icon_id=${all_info['user_info']['profile']['icon_id']}`);
 
     if (profile != undefined) {
-        if (profile.icon_id == undefined) {
-            let insertData = [Array.from(new Map(Object.entries(participant_profile)).values())];
-
-            try { await db.dbInsert('PROFILE', insertData); } catch (error) {
-                console.log(error);
+        if (profile['icon_image'] != participant_profile['icon_image']) {
+            for (const [key, value] of Object.entries(participant)) {
+                if(key == icon_id) continue;
+                db.dbUpdate('PROFILE', `${key} = "${value}"`, `icon_id = "${icon_id}"`);
             }
         } else {
             console.log('Profile exists');
@@ -57,18 +58,21 @@ const insertTFTProfileData = async (icon_id, participant_profile) => {
 }
 
 const insertTFTTierData = async (user_info) => {
-    const [superfast] = await db.dbSelect('tier', 'superfast', `superfast.tier="${user_info['superfast']['tier']}"`);
-    const [ranks] = await db.dbSelect('tier, sub_tier', 'ranks', `ranks.tier='${user_info['ranks']['tier']}' and ranks.sub_tier='${user_info['ranks']['sub_tier']}'`);
-    const [user_superfast] = await db.dbSelect('date_in_sf', 'user_superfast', `user_superfast.puuid='${user_info['user']['puuid']}'`);
-    const [user_ranks] = await db.dbSelect('date_in_ranks', 'user_ranks', `user_ranks.puuid='${user_info['user']['puuid']}'`);
+    const [superfast] = await db.dbSelect('*', 'superfast', `superfast.tier="${user_info['superfast']['tier']}"`);
+    const [ranks] = await db.dbSelect('*', 'ranks', `ranks.tier='${user_info['ranks']['tier']}' and ranks.sub_tier='${user_info['ranks']['sub_tier']}'`);
+    const [user_superfast] = await db.dbSelect('*', 'user_superfast', `user_superfast.puuid='${user_info['user']['puuid']}'`);
+    const [user_ranks] = await db.dbSelect('*', 'user_ranks', `user_ranks.puuid='${user_info['user']['puuid']}'`);
     // const [superfast] = await db.dbSelect('tier', 'superfast', `superfast.tier="${all_info['user_info']['superfast']['tier']}"`);
     // const [ranks] = await db.dbSelect('tier, sub_tier', 'ranks', `ranks.tier='${all_info['user_info']['ranks']['tier']}' and ranks.sub_tier='${all_info['user_info']['ranks']['sub_tier']}'`);
     // const [user_superfast] = await db.dbSelect('date_in_sf', 'user_superfast', `user_superfast.puuid='${all_info['user_info']['user']['puuid']}'`);
     // const [user_ranks] = await db.dbSelect('date_in_ranks', 'user_ranks', `user_ranks.puuid='${all_info['user_info']['user']['puuid']}'`);
 
     if (superfast != undefined) {
-        if (superfast.tier == undefined) {
-            await insertTFTSuperfastData(user_info);
+        if (superfast['image_path'] != user_info['superfast']['image_path']) {
+            for (const [key, value] of Object.entries(user_info['superfast'])) {
+                if(key == 'tier') continue;
+                db.dbUpdate('SUPERFAST', `${key} = "${value}"`, `tier = "${user_info['superfast']['tier']}"`);
+            }
         } else {
             console.log('Superfast tier exists');
         }
@@ -78,9 +82,11 @@ const insertTFTTierData = async (user_info) => {
     }
 
     if (ranks != undefined) {
-        if (ranks.tier == undefined && ranks.sub_tier == undefined) {
-            // if (ranks.tier == undefined && ranks[0].sub_tier == undefined) {
-            await insertTFTRanksData(user_info);
+        if (ranks['image_path'] != user_info['ranks']['image_path']) {
+            for (const [key, value] of Object.entries(user_info['superfast'])) {
+                if(key == 'tier' || key == 'sub_tier') continue;
+                db.dbUpdate('RANKS', `${key} = "${value}"`, `tier = "${user_info['ranks']['tier']}" and sub_tier='${user_info['ranks']['sub_tier']}'`);
+            }
         } else {
             console.log('Ranks exists');
         }
@@ -90,10 +96,17 @@ const insertTFTTierData = async (user_info) => {
     }
 
     if (user_superfast != undefined) {
-        if ((new Date().getTime - user_superfast.date_in_sf) / 1000 / 60 / 60 >= 12) {
-            // if ((new Date().getTime - user_superfast[0].date_in_sf) / 1000 / 60 / 60 >= 12) {
+        if ((new Date().getTime - user_superfast['date_in_sf']) / 1000 / 60 / 60 >= 12) {
             await insertTFTUserSuperfastData(user_info);
         } else {
+            for (const [key, value] of Object.entries(user_info['user_superfast'])) {
+                if(key == 'puuid' || key == 'date_in_sf') continue;
+                db.dbUpdate(
+                    `USER_SUPERFAST AS A, (SELECT * FROM USER_SUPERFAST WHERE puuid="${user_superfast['puuid']}" ORDER BY date_in_sf DESC LIMIT 1) AS B`, 
+                    `A.${key} = "${value}"`, 
+                    `A.puuid="${user_superfast['puuid']}" and A.date_in_sf=B.date_in_sf`
+                );
+            }
             console.log('User superfast before 12 hours');
         }
     } else {
@@ -102,10 +115,17 @@ const insertTFTTierData = async (user_info) => {
     }
 
     if (user_ranks != undefined) {
-        if ((new Date().getTime - user_ranks.date_in_ranks) / 1000 / 60 / 60 >= 12) {
-            // if ((new Date().getTime - user_ranks[0].date_in_ranks) / 1000 / 60 / 60 >= 12) {
+        if ((new Date().getTime - user_ranks['date_in_ranks']) / 1000 / 60 / 60 >= 12) {
             await insertTFTUserRanksData(user_info);
         } else {
+            for (const [key, value] of Object.entries(user_info['user_ranks'])) {
+                if(key == 'puuid' || key == 'date_in_ranks') continue;
+                db.dbUpdate(
+                    `USER_RANKS AS A, (SELECT * FROM USER_RANKS WHERE puuid="${user_ranks['puuid']}" ORDER BY date_in_ranks DESC LIMIT 1) AS B`, 
+                    `A.${key} = "${value}"`, 
+                    `A.puuid="${user_ranks['puuid']}" and A.date_in_ranks=B.date_in_ranks`
+                );
+            }
             console.log('User ranks before 12 hours');
         }
     } else {
@@ -116,7 +136,6 @@ const insertTFTTierData = async (user_info) => {
 
 const insertTFTSuperfastData = async (user_info) => {
     let insertData = [Array.from(new Map(Object.entries(user_info['superfast'])).values())];
-    // let insertData = [Array.from(new Map(Object.entries(all_info['user_info']['superfast'])).values())];
 
     try {
         await db.dbInsert('SUPERFAST', insertData);
@@ -127,7 +146,6 @@ const insertTFTSuperfastData = async (user_info) => {
 
 const insertTFTRanksData = async (user_info) => {
     let insertData = [Array.from(new Map(Object.entries(user_info['ranks'])).values())];
-    // let insertData = [Array.from(new Map(Object.entries(all_info['user_info']['ranks'])).values())];
 
     try { await db.dbInsert('RANKS', insertData); } catch (error) {
         console.log(error);
@@ -135,15 +153,14 @@ const insertTFTRanksData = async (user_info) => {
 }
 const insertTFTUserSuperfastData = async (user_info) => {
     let insertData = [Array.from(new Map(Object.entries(user_info['user_superfast'])).values())];
-    // let insertData = [Array.from(new Map(Object.entries(all_info['user_info']['user_superfast'])).values())];
 
     try { await db.dbInsert('USER_SUPERFAST', insertData); } catch (error) {
         console.log(error);
     }
 }
+
 const insertTFTUserRanksData = async (user_info) => {
     let insertData = [Array.from(new Map(Object.entries(user_info['user_ranks'])).values())];
-    // let insertData = [Array.from(new Map(Object.entries(all_info['user_info']['user_ranks'])).values())];
 
     try { await db.dbInsert('USER_RANKS', insertData); } catch (error) {
         console.log(error);
@@ -153,8 +170,6 @@ const insertTFTUserRanksData = async (user_info) => {
 const insertTFTParticipantsData = async () => {
     console.log(all_info.length);
     for (i = 0; i < all_info.length; i++) {
-        // console.log(i);
-        // console.log(all_info[i]['user_info']);
         let profile = all_info[i]['user_info']['profile'];
         let user = all_info[i]['user_info']['user'];
         let tier = all_info[i]['user_info'];
@@ -199,7 +214,7 @@ const insertTFTMatchesData = async (match_info) => {
 
 const insertTFTSynergyData = async (synergy_info) => {
     for (i = 0; i < synergy_info['synergy_name'].length; i++) {
-        const [synergy] = await db.dbSelect('synergy_name, synergy_rank', 'SYNERGY', `synergy_name="${synergy_info['synergy_name'][i]}" and synergy_rank=${synergy_info['synergy_rank'][i]}`);
+        const [synergy] = await db.dbSelect('*', 'SYNERGY', `synergy_name="${synergy_info['synergy_name'][i]}" and synergy_rank=${synergy_info['synergy_rank'][i]}`);
 
         if (synergy == undefined) {
             let temp = {};
@@ -212,7 +227,18 @@ const insertTFTSynergyData = async (synergy_info) => {
                 console.log(error);
             }
         } else {
-            console.log('Synergy data exists');
+            let temp = {};
+            temp['synergy_name'] = synergy_info['synergy_name'][i];
+            temp['synergy_rank'] = synergy_info['synergy_rank'][i];
+            temp['synergy_image_path'] = "";
+
+            if (synergy['synergy_image_path'] != temp['synergy_image_path']) {
+
+                for (const [key, value] of Object.entries(temp)) {
+                    if(key == 'synergy_name' || key == 'synergy_rank') continue;
+                    db.dbUpdate('SYNERGY', `${key} = "${value}"`, `synergy_name = "${temp['synergy_name']}" and synergy_rank = "${temp['synergy_rank']}"`);
+                }
+            } else console.log('Synergy data exists');
         }
     }
 }
@@ -221,8 +247,7 @@ const insertTFTAugmentsData = async (augments_info) => {
     for (i = 0; i < 3; i++) {
         if (augments_info['augments_name'] != null) {
             const [augments] = await db.dbSelect('augments_name', 'AUGMENTS', `augments_name="${augments_info['augments_name'][i]}"`);
-            console.log(augments);
-            console.log(augments_info['augments_name'][i]);
+
             if (augments == undefined) {
                 let temp = {};
 
@@ -235,7 +260,18 @@ const insertTFTAugmentsData = async (augments_info) => {
                     console.log(error);
                 }
             } else {
-                console.log('Augments data exists');
+                let temp = {};
+
+                temp['augments_name'] = augments_info['augments_name'][i];
+                temp['augments_image_path'] = "";
+
+                if (augments['augments_image_path'] != temp['augments_image_path']) {
+                    
+                    for (const [key, value] of Object.entries(temp)) {
+                        if(key == 'augments_name') continue;
+                        db.dbUpdate('AUGMENTS', `${key} = "${value}"`, `augments_name = "${temp['augments_name']}"`);
+                    }
+                } else console.log('Augments data exists');
             }
         }
     }
@@ -251,7 +287,12 @@ const insertTFTLegendsData = async (legends_info) => {
             console.log(error);
         }
     } else {
-        console.log('Legends data exists');
+        if (legends['legends_image_path'] != legends_info['legends_image_path']) {
+            for (const [key, value] of Object.entries(legends_info)) {
+                if(key == 'legends_name') continue;
+                db.dbUpdate('LEGENDS', `${key} = "${value}"`, `legends_name = "${legends_info['legends_name']}"`);
+            }
+        } else console.log('Legends data exists');
     }
 }
 
@@ -273,7 +314,19 @@ const insertTFTUnitsData = async (units_info) => {
                 console.log(error);
             }
         } else {
-            console.log('Units data exists');
+            let temp = {};
+
+            temp['units_name'] = units_info['units_name'][i];
+            temp['units_rank'] = units_info['units_rank'][i];
+            temp['units_cost'] = units_info['units_cost'][i];
+            temp['units_image_path'] = "";
+
+            if (units['units_image_path'] != temp['units_image_path']) {
+                for (const [key, value] of Object.entries(temp)) {
+                    if(key == 'units_name' || key == 'units_rank') continue;
+                    db.dbUpdate('UNITS', `${key} = "${value}"`, `units_name = "${temp['units_name']}" and units_rank = "${temp['units_rank']}"`);
+                }
+            } else console.log('Units data exists');
         }
     }
 }
@@ -295,7 +348,17 @@ const insertTFTItemsData = async (items_info) => {
                 console.log(error);
             }
         } else {
-            console.log('Items data exists');
+            let temp = {};
+
+            temp['items_name'] = item_name[i];
+            temp['units_image_path'] = "";
+
+            if (items['items_image_path'] != temp['items_image_path']) {
+                for (const [key, value] of Object.entries(temp)) {
+                    if(key == 'items_name') continue;
+                    db.dbUpdate('ITEMS', `${key} = "${value}"`, `items_name = "${temp['items_name']}"`);
+                }
+            } else console.log('Items data exists');
         }
     }
 }
@@ -378,6 +441,16 @@ const insertTFTParticipantsMatchesData = async () => {
         await insertTFTUnitsInMatchData(temp2['units_in_matches_info']);
         await insertTFTAugmentsInMatchData(all_info[k]['augments_in_matches_info']);
         await insertTFTSynergyInMatchData(temp3['synergy_in_matches_info']);
+    }
+}
+
+function isString(inputText){
+    if(typeof inputText === 'string' || inputText instanceof String){
+        //it is string
+        return true;    
+    }else{
+        //it is not string
+        return false;
     }
 }
 

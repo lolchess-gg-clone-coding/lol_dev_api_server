@@ -4,8 +4,17 @@ const axios = require('axios');
 
 const my_api_key = process.env.API_KEY;
 
+console.log(my_api_key);
+
 const headers = {
   "X-Riot-Token": my_api_key
+  
+    // "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Safari/537.36",
+    // "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+    // "Accept-Charset": "application/x-www-form-urlencoded; charset=UTF-8",
+    // "Origin": "https://developer.riotgames.com",
+    // "X-Riot-Token": "RGAPI-9b4295fc-5774-4015-b8b9-bb82736dec86"
+
 };
 
 const tierEnums = {
@@ -32,6 +41,7 @@ async function getAllInfo(nickname) {
 
   let matchIdList;
   try {
+    // 숫자 바꿔서 매치 목록 원하는 만큼 가져올 수 있음
     matchIdList = await getMatchIdList(searchUserPuuid, 1);
   } catch (error) {
     console.log(error);
@@ -47,7 +57,7 @@ async function getAllInfo(nickname) {
     } else {
       all_info[i]['user_info'] = searchUserInfo;
     }
-    
+
     all_info[i]['match_info'] = temp['match_info'][i];
     all_info[i]['legends_info'] = temp['legends_info'][i];
     all_info[i]['synergy_info'] = temp['synergy_info'][i];
@@ -64,9 +74,10 @@ async function getAllInfo(nickname) {
 
 async function getUserInfoByNickname(nickname) {
   try {
-    response_summoner = await axios.get('https://kr.api.riotgames.com/tft/summoner/v1/summoners/by-name/' + encodeURI(nickname) + "?api_key=" + my_api_key);
+    response_summoner = await axios.get('https://kr.api.riotgames.com/tft/summoner/v1/summoners/by-name/' + encodeURI(nickname), { headers: headers} );
     return await parsingUserInfo(response_summoner);
   } catch (error) {
+    console.log('getUserInfoByNickname');
     console.log(error);
   }
   // user table
@@ -86,10 +97,10 @@ async function parsingUserInfo(response) {
   let user = {};
 
   user['puuid'] = response['data']['puuid'];
-  user['summonerId'] = response['data']['id'];
-  user['nickname'] = response['data']['name'];
+  user['summoner_id'] = response['data']['id'];
+  user['nickname'] = response['data']['name'].toString().replace(/(\s*)/g, "");
   user['levels'] = response['data']['summonerLevel'];
-  user['updateAt'] = new Date(Date.now());
+  user['updateAt'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
   user['icon_id'] = response['data']['profileIconId'];
 
   // user_profile table
@@ -99,7 +110,7 @@ async function parsingUserInfo(response) {
   profile['icon_image'] = "";
 
   try {
-    response_league = await axios.get('https://kr.api.riotgames.com/tft/league/v1/entries/by-summoner/' + user['summonerId'] + "?api_key=" + my_api_key);
+    response_league = await axios.get('https://kr.api.riotgames.com/tft/league/v1/entries/by-summoner/' + user['summoner_id'] + "?api_key=" + my_api_key);
   } catch (error) {
     console.log(error);
   }
@@ -113,7 +124,7 @@ async function parsingUserInfo(response) {
   if (response_league['data'].length == 0) {
     // 초고속 모드
     user_superfast['puuid'] = response_summoner['data']['puuid'];
-    user_superfast['date_in_tier'] = new Date(Date.now());
+    user_superfast['date_in_sf'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
     user_superfast['tier'] = 'Unranked';
     user_superfast['league_point'] = 0;
 
@@ -122,7 +133,7 @@ async function parsingUserInfo(response) {
 
     // 랭크 게임
     user_ranks['puuid'] = response_summoner['data']['puuid'];
-    user_ranks['date_in_tier'] = new Date(Date.now());
+    user_ranks['date_in_ranks'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
     user_ranks['tier'] = 'Unranked';
     user_ranks['sub_tier'] = 'N';
     user_ranks['league_point'] = 0;
@@ -136,7 +147,7 @@ async function parsingUserInfo(response) {
   } else if (response_league['data'].length == 1 && response_league['data'][0]['queueType'] == 'RANKED_TFT_TURBO') {
     // 초고속 모드
     user_superfast['puuid'] = response_summoner['data']['puuid'];
-    user_superfast['date_in_tier'] = new Date(Date.now());
+    user_superfast['date_in_sf'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
     user_superfast['tier'] = response_league['data'][0]['ratedTier'];
     user_superfast['league_point'] = response_league['data'][0]['ratedRating'];
 
@@ -145,7 +156,7 @@ async function parsingUserInfo(response) {
 
     // 랭크 게임
     user_ranks['puuid'] = response_summoner['data']['puuid'];
-    user_ranks['date_in_tier'] = new Date(Date.now());
+    user_ranks['date_in_ranks'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
     user_ranks['tier'] = 'Unranked';
     user_ranks['sub_tier'] = 'N';
     user_ranks['league_point'] = 0;
@@ -161,7 +172,7 @@ async function parsingUserInfo(response) {
     if (response_league['data'].length == 1) {
       // 초고속 모드
       user_superfast['puuid'] = response_summoner['data']['puuid'];
-      user_superfast['date_in_tier'] = new Date(Date.now());
+      user_superfast['date_in_sf'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
       user_superfast['tier'] = 'Unranked';
       user_superfast['league_point'] = 0;
 
@@ -170,7 +181,7 @@ async function parsingUserInfo(response) {
 
       // 랭크 게임
       user_ranks['puuid'] = response_summoner['data']['puuid'];
-      user_ranks['date_in_tier'] = new Date(Date.now());
+      user_ranks['date_in_ranks'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
       user_ranks['tier'] = response_league['data'][0]['tier'];
       user_ranks['sub_tier'] = response_league['data'][0]['rank'];
       user_ranks['league_point'] = response_league['data'][0]['leaguePoints'];
@@ -192,7 +203,7 @@ async function parsingUserInfo(response) {
 
       // 초고속 모드
       user_superfast['puuid'] = response_summoner['data']['puuid'];
-      user_superfast['date_in_tier'] = new Date(Date.now());
+      user_superfast['date_in_sf'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
       user_superfast['tier'] = temp[1]['ratedTier'];
       user_superfast['league_point'] = response_league['data'][1]['ratedRating'];
 
@@ -201,7 +212,7 @@ async function parsingUserInfo(response) {
 
       // 랭크 게임
       user_ranks['puuid'] = response_summoner['data']['puuid'];
-      user_ranks['date_in_tier'] = new Date(Date.now());
+      user_ranks['date_in_ranks'] = new Date().toISOString().slice(0, 19).replace('T', ' ');;
       user_ranks['tier'] = temp[0]['tier'];
       user_ranks['sub_tier'] = temp['rank'];
       user_ranks['league_point'] = temp['leaguePoints'];
@@ -231,6 +242,7 @@ async function parsingUserInfo(response) {
 async function getMatchIdList(puuid, num) {
   try {
     response_match_id_list = await axios.get('https://asia.api.riotgames.com/tft/match/v1/matches/by-puuid/' + puuid + '/ids?count=' + num, { headers: headers });
+    // 여기서 인덱스 바꾸면 다른 매치 데이터 저장 가능
     return response_match_id_list['data'][0];
   } catch (error) {
     console.log(error);
@@ -257,13 +269,13 @@ async function getMatchInfo(match_id) {
   temp = {};
   temp['puuid'] = [];
   temp['match_id'] = [];
+  temp['playtime'] = [];
   temp['game_type'] = [];
-  temp['playdate'] = [];
   temp['placement'] = [];
   temp['left_gold'] = [];
   temp['last_round'] = [];
   temp['levels'] = [];
-  temp['playtime'] = [];
+  temp['playdate'] = [];
   temp['legends_name'] = [];
 
   all_info['legends_info'] = [];
