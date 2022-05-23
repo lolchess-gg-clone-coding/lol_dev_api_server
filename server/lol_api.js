@@ -464,13 +464,27 @@ function getUnitsInMatchInfo(match_id, participant) {
   });
 
   for (i = 0; i < participant['units'].length; i++) {
-    for (j = 0; j < participant['units'].length; j++) {
-      if (participant['units'][i]['rarity'] > participant['units'][j]['rarity']) {
-        units_in_matches_info['units_name'][j] = units_in_matches_info['units_name'][i];
-        units_in_matches_info['units_rank'][j] = units_in_matches_info['units_rank'][i];
-        units_in_matches_info['item_name1'][j] = units_in_matches_info['item_name1'][i];
-        units_in_matches_info['item_name2'][j] = units_in_matches_info['item_name2'][i];
-        units_in_matches_info['item_name3'][j] = units_in_matches_info['item_name3'][i];
+    for (j = 0; j < participant['units'].length - 1 - i; j++) {
+      if (participant['units'][i]['rarity'] > participant['units'][i+1]['rarity']) {
+        let temp = units_in_matches_info['units_name'][i+1];
+        units_in_matches_info['units_name'][i+1] = units_in_matches_info['units_name'][i];
+        units_in_matches_info['units_name'][i] = temp;
+
+        temp = units_in_matches_info['units_rank'][i+1];
+        units_in_matches_info['units_rank'][i+1] = units_in_matches_info['units_rank'][i];
+        units_in_matches_info['units_rank'][i] = temp;
+
+        temp = units_in_matches_info['item_name1'][i+1];
+        units_in_matches_info['item_name1'][i+1] = units_in_matches_info['item_name1'][i];
+        units_in_matches_info['item_name1'][i] = temp;
+
+        temp = units_in_matches_info['item_name2'][i+1];
+        units_in_matches_info['item_name2'][i+1] = units_in_matches_info['item_name2'][i];
+        units_in_matches_info['item_name2'][i] = temp;
+
+        temp = units_in_matches_info['item_name3'][i+1];
+        units_in_matches_info['item_name3'][i+1] = units_in_matches_info['item_name3'][i];
+        units_in_matches_info['item_name3'][i] = temp;
       }
     }
   }
